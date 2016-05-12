@@ -1,19 +1,53 @@
 #include "Arduino.h"
 
-int pin1=9;
-int pote=A0;
-int valorPote;
-int pwm1;
+int inputPin = A0;
+int setPointPin = A1;
+int outputPin = 9;
 
-void setup() {
+unsigned long lastTime;
+int input, output, outputPWM, setPoint;
+double errSum, lastErr;
+double kp, ki, kd;
+
+double min = 0;
+double max = 1023;
+
+void setup()
+{
   Serial.begin(9600);
-  pinMode(pin1, OUTPUT);
+  pinMode(inputPin, INPUT);
+  pinMode(setPointPin, INPUT);
+  pinMode(outputPin, OUTPUT);
 }
 
-void loop() {
-  valorPote = analogRead(pote);
-  pwm1 = map(valorPote, 0, 1023, 0, 255);
-  analogWrite(pin1, pwm1);
+void loop()
+{
+  input = analogRead(inputPin);
+  setPoint = analogRead(setPointPin);
 
-  Serial.println(pin1);
+  unsigned long now = millis();
+  double timeChange = (double)(now - lastTime);
+
+  // P
+  double error = (double)(setPoint - input);
+  // I
+  errSum += (error * timeChange);
+  if (errSum > max) errSum = max;
+  else if (errSum < min) errSum = min;
+  // D
+  double dErr = (error - lastErr) / timeChange;
+
+  // compute output
+  output = kp * error + ki * errSum + kd * dErr;
+  if (output > max) output = max;
+  else if (output < min) output = min;
+
+  // map to PWM range
+  outputPWM = map((int)(output+0.5), 0, 1023, 0, 255);
+
+  analogWrite(outputPin, outputPWM);
+  Serial.println(outputPWM);
+
+  lastErr = error;
+  lastTime = now;
 }
