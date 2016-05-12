@@ -1,53 +1,37 @@
-#include "Arduino.h"
+#include <arduino.h>
+#include <PID_v1.h>
 
-int inputPin = A0;
-int setPointPin = A1;
-int outputPin = 9;
+//Define Variables we'll be connecting to
+double Setpoint, Input, Output;
 
-unsigned long lastTime;
-int input, output, outputPWM, setPoint;
-double errSum, lastErr;
-double kp, ki, kd;
+//Define the aggressive and conservative Tuning Parameters
+double aggKp=4, aggKi=0.2, aggKd=1;
+double consKp=1, consKi=0.05, consKd=0.25;
 
-double min = 0;
-double max = 1023;
+//Specify the links and initial tuning parameters
+PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
 void setup()
 {
-  Serial.begin(9600);
-  pinMode(inputPin, INPUT);
-  pinMode(setPointPin, INPUT);
-  pinMode(outputPin, OUTPUT);
+  myPID.SetMode(AUTOMATIC);
 }
 
 void loop()
 {
-  input = analogRead(inputPin);
-  setPoint = analogRead(setPointPin);
+  Input = analogRead(A0);
+  SetPoint = analogRead(A1);
 
-  unsigned long now = millis();
-  double timeChange = (double)(now - lastTime);
+  double gap = abs(Setpoint-Input); //distance away from setpoint
+  if(gap<10)
+  {  //we're close to setpoint, use conservative tuning parameters
+    myPID.SetTunings(consKp, consKi, consKd);
+  }
+  else
+  {
+     //we're far from setpoint, use aggressive tuning parameters
+     myPID.SetTunings(aggKp, aggKi, aggKd);
+  }
 
-  // P
-  double error = (double)(setPoint - input);
-  // I
-  errSum += (error * timeChange);
-  if (errSum > max) errSum = max;
-  else if (errSum < min) errSum = min;
-  // D
-  double dErr = (error - lastErr) / timeChange;
-
-  // compute output
-  output = kp * error + ki * errSum + kd * dErr;
-  if (output > max) output = max;
-  else if (output < min) output = min;
-
-  // map to PWM range
-  outputPWM = map((int)(output+0.5), 0, 1023, 0, 255);
-
-  analogWrite(outputPin, outputPWM);
-  Serial.println(outputPWM);
-
-  lastErr = error;
-  lastTime = now;
+  myPID.Compute();
+  analogWrite(3,Output);
 }
