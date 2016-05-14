@@ -10,7 +10,7 @@ int sampleTime = 0.1; // in seconds
 
 // Working variables
 volatile int input, output, outputPWM, setPoint;
-volatile double errSum, lastErr;
+volatile double errSum, lastInput;
 double kp, ki, kd;
 
 void setTunings(double a, double b, double c) {
@@ -31,10 +31,10 @@ ISR(TIMER1_COMPA_vect)
   if (errSum > 1023) errSum = 1023;
   else if (errSum < 0) errSum = 0;
   // D
-  double dErr = (error - lastErr);
+  double dInput = (input - lastInput);
 
   // compute output
-  output = kp * error + ki * errSum + kd * dErr;
+  output = kp * error + ki * errSum - kd * dInput;
   if (output > 1023) output = 1023;
   else if (output < 0) output = 0;
 
@@ -44,7 +44,7 @@ ISR(TIMER1_COMPA_vect)
   analogWrite(outputPin, outputPWM);
   Serial.println(outputPWM);
 
-  lastErr = error;
+  lastInput = input;
 }
 
 void setup()
