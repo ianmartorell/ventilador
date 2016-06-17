@@ -1,37 +1,24 @@
 #include <arduino.h>
 #include <PID_v1.h>
 
-//Define Variables we'll be connecting to
-double Setpoint, Input, Output;
+int inputPin = A0;
+int setPointPin = A1;
+int outputPin = 9;
 
-//Define the aggressive and conservative Tuning Parameters
-double aggKp=4, aggKi=0.2, aggKd=1;
-double consKp=1, consKi=0.05, consKd=0.25;
+double setPoint, input, output;
+double kp=0.8, ki=0.25, kd=0;
 
-//Specify the links and initial tuning parameters
-PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
+PID PID(&input, &output, &setPoint, kp, ki, kd, DIRECT);
 
 void setup()
 {
-  myPID.SetMode(AUTOMATIC);
+  PID.SetMode(AUTOMATIC);
 }
 
 void loop()
 {
-  Input = analogRead(A0);
-  SetPoint = analogRead(A1);
-
-  double gap = abs(Setpoint-Input); //distance away from setpoint
-  if(gap<10)
-  {  //we're close to setpoint, use conservative tuning parameters
-    myPID.SetTunings(consKp, consKi, consKd);
-  }
-  else
-  {
-     //we're far from setpoint, use aggressive tuning parameters
-     myPID.SetTunings(aggKp, aggKi, aggKd);
-  }
-
-  myPID.Compute();
-  analogWrite(3,Output);
+  input = analogRead(inputPin);
+  setPoint = analogRead(setPointPin);
+  PID.Compute();
+  analogWrite(outputPin, output);
 }
